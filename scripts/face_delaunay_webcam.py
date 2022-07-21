@@ -93,7 +93,6 @@ def main():
         rval = False
         
     frame_id = 0
-    start_key_id = 0
     while rval:
         frame = cv2.flip(frame, 1)
         
