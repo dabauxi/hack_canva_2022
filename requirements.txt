@@ -1,2 +1,4 @@
-opencv-python
+dlib==19.24.0
+opencv-python==4.5.1.48
+scipy==1.8.1
 flask
