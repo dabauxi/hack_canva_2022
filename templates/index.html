@@ -1,9 +1,23 @@
 <html>
+
   <head>
     <title>Canva Hackathon 2022</title>
+    <script src="{{ url_for('static', filename='myScript.js') }}"></script>
   </head>
   <body>
     <h1>Video Streaming Demonstration</h1>
     <img id="bg" src="{{ url_for('video_feed') }}">
+
+    <div>
+      <a href="{{ url_for('take_picture') }}"><button >Take picture</button></a>
+      <a href="{{ url_for('start_animate') }}"><button>Start</button></a>
+    </div>
+
+    <form method=post enctype=multipart/form-data>
+      <input type="file" name="file[]" multiple="">
+      <input type=submit value=Upload>
+    </form>
+    <div id="header"></div>
+
   </body>
 </html>
