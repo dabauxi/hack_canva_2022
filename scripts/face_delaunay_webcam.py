@@ -12,7 +12,7 @@ configs = {
 
 def _compute_landmarks(img):
     # detect facial landmarks 
-    _, landmarks = detect_landmarks(img)
+    landmarks = detect_landmarks(img)
 
     # use 28 of the 68 landmarks provided by dlib shape-predictor
     if configs["num_l_pts"] == 28:
@@ -21,8 +21,8 @@ def _compute_landmarks(img):
     return landmarks
 
 
-def _vis_voronoi_diagram(half_img, full_img, landmark_pts):
-    subdiv = _init_subdiv(img)
+def _vis_voronoi_diagram(half_img, landmark_pts):
+    subdiv = _init_subdiv(half_img)
     try:
         for p in landmark_pts:
             subdiv.insert(p)
@@ -30,12 +30,12 @@ def _vis_voronoi_diagram(half_img, full_img, landmark_pts):
         return 
         
     # allocate space for voronoi Diagram
-    img_voronoi = np.zeros(img.shape, dtype=img.dtype)
+    img_voronoi = np.zeros(half_img.shape, dtype=half_img.dtype)
 
     # voronoi diagram
     img_voronoi = cv2.flip(img_voronoi, 1)
     draw_voronoi(img_voronoi, subdiv)
-    # cv2.imshow(configs["img_win_name"], img_voronoi)
+    # img_voronoi = cv2.resize(img_voronoi, dsize=None, fx=2.0, fy=2.0)
     cv2.imshow("voronoi", img_voronoi)
     # cv2.waitKey(-1)
 
@@ -111,9 +111,12 @@ def main():
                 
         # for rest do the voronoi diagram
         if start_key_id >= 1:
-            half_res_frame = frame.copy()
-            half_res_frame = cv2.resize(half_res_frame, dsize=None, fx = 0.5, fy = 0.5, interpolation = cv2.INTER_AREA)
-            landmarks = _compute_landmarks(half_res_frame)
+            # half_res_frame = frame.copy()
+            # half_res_frame = cv2.resize(half_res_frame, dsize=None, fx = 0.5, fy = 0.5, interpolation = cv2.INTER_AREA)
+            # landmarks = _compute_landmarks(half_res_frame)
+            # _vis_voronoi_diagram(half_res_frame, landmark_pts=landmarks)
+            
+            landmarks = _compute_landmarks(frame)
             _vis_voronoi_diagram(frame, landmark_pts=landmarks)
             
     cv2.destroyWindow(configs["img_win_name"])

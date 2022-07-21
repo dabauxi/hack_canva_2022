@@ -38,6 +38,7 @@ def draw_voronoi(img, subdiv):
     (facets, centers) = subdiv.getVoronoiFacetList([])
 
     for i in range(0, len(facets)):
+        img_copy = img.copy()
         ifacet_arr = []
         for f in facets[i]:
             ifacet_arr.append(f)
@@ -50,7 +51,10 @@ def draw_voronoi(img, subdiv):
         cv2.polylines(img, ifacets, True, (0, 0, 0), 1, cv2.LINE_AA, 0)
         # cv2.circle(img, (int(centers[i][0]), int(centers[i][1])), 3, (0, 0, 0), cv2.FILLED, cv2.LINE_AA, 0)
 
-
+        img_copy = cv2.flip(img_copy, 1)
+        cv2.imshow("voronoi", img_copy)
+        cv2.waitKey(100)
+        
 def image_resize(image, width = None, height = None, inter = cv2.INTER_AREA):
     # initialize the dimensions of the image to be resized and
     # grab the image size

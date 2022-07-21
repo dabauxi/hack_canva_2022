@@ -15,7 +15,10 @@ def detect_landmarks(img, model_landmarks="./shape_predictor_68_face_landmarks.d
 
     # process only first image
     # TODO: process only the biggest face
-    face = faces_in_image[0]
+    try:
+        face = faces_in_image[0]
+    except IndexError:
+        return []
 
     # assign the facial landmarks
     landmarks = predictor(img_gray, face)
@@ -25,7 +28,7 @@ def detect_landmarks(img, model_landmarks="./shape_predictor_68_face_landmarks.d
     for i in range(0, landmarks.num_parts):
         landmarks_list.append((landmarks.part(i).x, landmarks.part(i).y))
 
-    return face, landmarks_list
+    return landmarks_list
 
 
 if __name__ == '__main__':
