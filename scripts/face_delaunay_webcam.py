@@ -6,13 +6,16 @@ from utils import draw_delaunay, draw_voronoi
 
 configs = {
     "img_win_name": "image",
-    "num_l_pts": 28  # either 28 or 68
+    "num_l_pts": 68  # either 28 or 68
 }
 
 
 def _compute_landmarks(img):
     # detect facial landmarks 
     landmarks = detect_landmarks(img)
+    
+    if landmarks is None:
+        return None
 
     # use 28 of the 68 landmarks provided by dlib shape-predictor
     if configs["num_l_pts"] == 28:
@@ -21,8 +24,8 @@ def _compute_landmarks(img):
     return landmarks
 
 
-def _vis_voronoi_diagram(half_img, landmark_pts):
-    subdiv = _init_subdiv(half_img)
+def _vis_voronoi_diagram(img, landmark_pts):
+    subdiv = _init_subdiv(img)
     try:
         for p in landmark_pts:
             subdiv.insert(p)
@@ -30,14 +33,12 @@ def _vis_voronoi_diagram(half_img, landmark_pts):
         return 
         
     # allocate space for voronoi Diagram
-    img_voronoi = np.zeros(half_img.shape, dtype=half_img.dtype)
+    img_voronoi = np.zeros(img.shape, dtype=img.dtype)
 
     # voronoi diagram
-    img_voronoi = cv2.flip(img_voronoi, 1)
+    # img_voronoi = cv2.flip(img_voronoi, 1)
     draw_voronoi(img_voronoi, subdiv)
-    # img_voronoi = cv2.resize(img_voronoi, dsize=None, fx=2.0, fy=2.0)
-    cv2.imshow("voronoi", img_voronoi)
-    # cv2.waitKey(-1)
+    # cv2.imshow("voronoi", img_voronoi)
 
 
 def _init_subdiv(img):
@@ -58,13 +59,18 @@ def _first_frame_del_animate(img):
     """
     # compute landmark on the first frame
     landmark_pts = _compute_landmarks(img)
+    if landmark_pts is None:
+        return
     
     # init subdiv only once
     subdiv = _init_subdiv(img)
     
     # insert points into subdiv and animate
     for p in landmark_pts:
-        subdiv.insert(p)
+        try:
+            subdiv.insert(p)
+        except Exception:
+            return
         img_copy = img.copy()
         
         # draw & show delaunay triangles
@@ -73,11 +79,7 @@ def _first_frame_del_animate(img):
         img_copy = cv2.flip(img_copy, 1)
         cv2.imshow(configs["img_win_name"], img_copy)
         cv2.waitKey(100)
-        
-    # Draw delaunay triangles
-    draw_delaunay(img, subdiv, (0, 255, 255))
-    cv2.imshow(configs["img_win_name"], img)
-    
+           
 
 def main():
     print("starting webcam...")
@@ -103,21 +105,29 @@ def main():
         if key == 27:  # exit on ESC
             break
         
-        if key == ord("s"):
-            start_key_id += 1
-            # for the first frame do the delaunay animation only
-            if start_key_id == 1:
-                _first_frame_del_animate(frame)
+        # if key == ord("s"):
+        #     start_key_id += 1
+        #     # for the first frame do the delaunay animation only
+        #     if start_key_id == 1:
+        #         _first_frame_del_animate(frame)
                 
-        # for rest do the voronoi diagram
-        if start_key_id >= 1:
-            # half_res_frame = frame.copy()
-            # half_res_frame = cv2.resize(half_res_frame, dsize=None, fx = 0.5, fy = 0.5, interpolation = cv2.INTER_AREA)
-            # landmarks = _compute_landmarks(half_res_frame)
-            # _vis_voronoi_diagram(half_res_frame, landmark_pts=landmarks)
+        #         landmarks = _compute_landmarks(frame)
+        #         if landmarks is not None:
+        #             _vis_voronoi_diagram(frame, landmark_pts=landmarks)
+                    
+                    
+        if key == ord("s"):
+            _first_frame_del_animate(frame)
             
             landmarks = _compute_landmarks(frame)
-            _vis_voronoi_diagram(frame, landmark_pts=landmarks)
+            if landmarks is not None:
+                _vis_voronoi_diagram(frame, landmark_pts=landmarks)
+                
+        # # for rest do the voronoi diagram
+        # if start_key_id >= 1:            
+        #     landmarks = _compute_landmarks(frame)
+        #     if landmarks is not None:
+        #         _vis_voronoi_diagram(frame, landmark_pts=landmarks)
             
     cv2.destroyWindow(configs["img_win_name"])
     vc.release()
