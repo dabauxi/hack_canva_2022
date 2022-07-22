@@ -55,7 +55,7 @@ class UploadForm extends React.Component {
     // formData.append("upload-images", uploadImages)
     // Request made to the backend api
     // Send formData object
-    let response = axios.post("http://api:5000/upload", formData).then(response => this.setState({original: response.data.original, modified: response.data.modified, fileUpload: false})).catch(error => console.log("error happened in post calls"))
+    let response = axios.post("http://127.0.0.1:5000/upload", formData).then(response => this.setState({original: response.data.original, modified: response.data.modified, fileUpload: false})).catch(error => console.log("error happened in post calls"))
     console.log(response)
     };
 
