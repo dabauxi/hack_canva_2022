@@ -1,14 +1,17 @@
+import concurrent.futures
 import io
+import multiprocessing
 import os
 import queue
 from base64 import encodebytes
 
 from PIL import Image
-from flask import Flask, Response, render_template, request, flash, url_for, jsonify
+from flask import Flask, Response, render_template, request, flash, jsonify
 from flask_cors import cross_origin, CORS
 from werkzeug.utils import redirect, secure_filename
 
 from camera import VideoCamera
+from triangler.triangulate import generate_del_tri
 
 app = Flask(__name__)
 
@@ -17,6 +20,7 @@ cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 UPLOAD_FOLDER = "./uploads"
+TRIANGULATE_FOLDER = "./triangulate"
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'secret'
@@ -84,6 +88,11 @@ def index():
     return Response()
 
 
+def triangulate(file_path, filename):
+    image = generate_del_tri(file_path)
+    image.save(os.path.join(TRIANGULATE_FOLDER, filename))
+
+
 @app.route("/test", methods=["GET", "POST"])
 @cross_origin()
 def upload_images():
@@ -103,8 +112,18 @@ def upload_images():
                 return redirect(request.url)
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
                 #return redirect(url_for('download_file', name=filename))
+
+                image = generate_del_tri(file_path)
+                image.save(os.path.join("./triangulated", filename))
+        # images = []
+        # for filename in os.listdir(UPLOAD_FOLDER):
+        #     images.append((filename, os.path.join(UPLOAD_FOLDER, filename)))
+        # with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+        #     executor.map(triangulate, images)
+
     return Response()
 
 
@@ -131,6 +150,22 @@ def start_animate():
     )
 
 
+@app.route("/reset")
+def reset():
+    if os.path.exists(UPLOAD_FOLDER):
+        try:
+            os.rmdir(UPLOAD_FOLDER)
+        except OSError:
+            pass
+        os.mkdir(UPLOAD_FOLDER)
+    if os.path.exists(TRIANGULATE_FOLDER):
+        try:
+            os.rmdir(TRIANGULATE_FOLDER)
+        except OSError:
+            pass
+        os.mkdir(TRIANGULATE_FOLDER)
+
+
 def get_image(image_path):
     pil_img = Image.open(image_path, mode='r')
     byte_arr = io.BytesIO()
@@ -144,8 +179,14 @@ def get_image(image_path):
 def get_uploaded_images():
     images = {"original": [], "modified": []}
     for image_path in os.listdir(UPLOAD_FOLDER):
-        images["original"].append(get_image(os.path.join(UPLOAD_FOLDER, image_path)))
-    return jsonify(images)
+        file_path = os.path.join(UPLOAD_FOLDER, image_path)
+        images["original"].append(get_image(file_path))
+        triangulated_path = os.path.join("./triangulated", image_path)
+        images["modified"].append(get_image(triangulated_path))
+    if len(images["original"]) == len(images["modified"]):
+        return jsonify(images)
+    else:
+        return jsonify({"original": [], "modified": []})
 
 
 if __name__ == "__main__":
