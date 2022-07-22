@@ -1,3 +1,4 @@
+import base64
 import concurrent.futures
 import io
 import multiprocessing
@@ -5,6 +6,7 @@ import os
 import queue
 from base64 import encodebytes
 
+import PIL.Image
 from PIL import Image
 from flask import Flask, Response, render_template, request, flash, jsonify
 from flask_cors import cross_origin, CORS
@@ -88,43 +90,60 @@ def index():
     return Response()
 
 
-def triangulate(file_path, filename):
-    image = generate_del_tri(file_path)
-    image.save(os.path.join(TRIANGULATE_FOLDER, filename))
+def triangulate(image):
+    return generate_del_tri(image)
 
 
 @app.route("/test", methods=["GET", "POST"])
-@cross_origin()
 def upload_images():
+    images = []
+    uploaded_images = []
+    modified = []
     if request.method == 'POST':
         # check if the post request has the file part
         if 'uploaded-images' not in request.files:
             flash('No file part')
             return redirect(request.url)
+
         uploaded_files = request.files.getlist("uploaded-images")
 
-        #file = request.files['file']
+        # file = request.files['file']
+        # for file in uploaded_files:
+        #     # If the user does not select a file, the browser submits an
+        #     # empty file without a filename.
+        #     if file.filename == '':
+        #         flash('No selected file')
+        #         return redirect(request.url)
+        #     if file and allowed_file(file.filename):
+        #         filename = secure_filename(file.filename)
+        #         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        #         file.save(file_path)
+        #         #return redirect(url_for('download_file', name=filename))
+        #
+        #         image = generate_del_tri(file_path)
+        #         image.save(os.path.join("./triangulated", filename))
         for file in uploaded_files:
-            # If the user does not select a file, the browser submits an
-            # empty file without a filename.
-            if file.filename == '':
-                flash('No selected file')
-                return redirect(request.url)
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(file_path)
-                #return redirect(url_for('download_file', name=filename))
+            pass
+            file.seek(0)
+            image_bytes = file.read()
+            uploaded_images.append(image_bytes)
 
-                image = generate_del_tri(file_path)
-                image.save(os.path.join("./triangulated", filename))
-        # images = []
-        # for filename in os.listdir(UPLOAD_FOLDER):
-        #     images.append((filename, os.path.join(UPLOAD_FOLDER, filename)))
-        # with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
-        #     executor.map(triangulate, images)
-
-    return Response()
+        with concurrent.futures.ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+            results = executor.map(triangulate, uploaded_images)
+        for result in results:
+            byte_arr = io.BytesIO()
+            result.save(byte_arr, format='PNG')
+            encoded_img = encodebytes(byte_arr.getvalue()).decode('ascii')
+            modified.append(encoded_img)
+        for image_bytes in uploaded_images:
+            image = PIL.Image.open(io.BytesIO(image_bytes))
+            byte_arr = io.BytesIO()
+            image.save(byte_arr, format='PNG')
+            encoded_img = encodebytes(byte_arr.getvalue()).decode('ascii')
+            images.append(encoded_img)
+    response = jsonify({"original": images, "modified": modified})
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
 
 @app.route("/video_feed")
